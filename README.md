@@ -34,7 +34,9 @@ The architecture was already in my head:
 
 ## 🎬 Watch it tell a joke
 
-[▶️ **tell-me-a-joke.mp4**](docs/assets/video/tell-me-a-joke.mp4): it laughs at its own jokes, afterwards, with its whole body. 😂
+[![Reachy tells a joke (captions included)](docs/assets/images/tell-me-a-joke.gif)](docs/assets/video/tell-me-a-joke.mp4)
+
+It laughs at its own jokes, afterwards, with its whole body. 😂 Click the GIF for the [full video with sound](docs/assets/video/tell-me-a-joke.mp4) 🔊.
 
 ## ⚙️ How it works
 
