@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: reachy-foundry
+metadata:
+  template: reachy-foundry@0.1.0
+
+# Infrastructure only: the app itself runs on the Reachy Mini, not in Azure.
+infra:
+  provider: bicep
+  path: infra
+
+hooks:
+  postprovision:
+    # Writes reachy_foundry_agent/.env (endpoints + Speech key) for local runs / copying to the robot.
+    run: python scripts/write_env.py

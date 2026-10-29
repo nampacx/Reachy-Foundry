@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "reachy_foundry_agent"
+version = "0.1.0"
+description = "Voice agent for Reachy Mini: Microsoft Agent Framework + Foundry model + Azure Speech"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "reachy-mini",
+    "agent-framework-foundry",
+    "azure-identity",
+    "httpx",
+    "numpy",
+    # cv2 is NOT listed: the Reachy Mini apps venv already ships opencv-python, and adding
+    # opencv-python-headless on top makes the two packages overwrite each other's cv2/ files.
+]
+
+keywords = ["reachy-mini-app"]
+
+[project.optional-dependencies]
+# For development machines only; on the robot cv2 and ultralytics come with the apps venv.
+dev = ["pytest", "opencv-python-headless"]
+vision = ["ultralytics"]
+
+[project.entry-points."reachy_mini_apps"]
+reachy_foundry_agent = "reachy_foundry_agent.main:ReachyFoundryAgent"
+
+[tool.setuptools]
+package-dir = { "" = "." }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+reachy_foundry_agent = ["**/*"] # Also include all non-.py files
