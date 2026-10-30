@@ -9,6 +9,8 @@
     "chatModelName": { "value": "${CHAT_MODEL_NAME=gpt-5.4-mini}" },
     "chatModelVersion": { "value": "${CHAT_MODEL_VERSION=2026-03-17}" },
     "chatSkuName": { "value": "${CHAT_SKU_NAME=GlobalStandard}" },
-    "chatCapacity": { "value": "${CHAT_CAPACITY=50}" }
+    "chatCapacity": { "value": "${CHAT_CAPACITY=50}" },
+    "altChatModelName": { "value": "${ALT_CHAT_MODEL_NAME=}" },
+    "altChatModelVersion": { "value": "${ALT_CHAT_MODEL_VERSION=}" }
   }
 }

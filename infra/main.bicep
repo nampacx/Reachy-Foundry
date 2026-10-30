@@ -26,6 +26,12 @@ param chatDeploymentName string = chatModelName
 @allowed(['GlobalStandard', 'DataZoneStandard', 'Standard'])
 param chatSkuName string = 'GlobalStandard'
 
+@description('Optional second chat model, deployed next to the first for A/B tests (e.g. latency). Empty = none.')
+param altChatModelName string = ''
+
+@description('Version of the second chat model.')
+param altChatModelVersion string = ''
+
 @description('Capacity in thousands of tokens per minute.')
 param chatCapacity int = 50
 
@@ -52,15 +58,28 @@ module foundry 'foundry.bicep' = {
     tags: tags
     accountName: 'fdy-${take(replace(environmentName, '_', '-'), 20)}-${take(token, 6)}'
     projectName: 'reachy'
-    deployments: [
-      {
-        name: chatDeploymentName
-        modelName: chatModelName
-        modelVersion: chatModelVersion
-        skuName: chatSkuName
-        capacity: chatCapacity
-      }
-    ]
+    deployments: concat(
+      [
+        {
+          name: chatDeploymentName
+          modelName: chatModelName
+          modelVersion: chatModelVersion
+          skuName: chatSkuName
+          capacity: chatCapacity
+        }
+      ],
+      empty(altChatModelName)
+        ? []
+        : [
+            {
+              name: altChatModelName
+              modelName: altChatModelName
+              modelVersion: altChatModelVersion
+              skuName: chatSkuName
+              capacity: chatCapacity
+            }
+          ]
+    )
     foundryUserPrincipals: appPrincipals
   }
 }
@@ -71,4 +90,5 @@ output FOUNDRY_ACCOUNT_NAME string = foundry.outputs.accountName
 output FOUNDRY_PROJECT_NAME string = foundry.outputs.projectName
 output FOUNDRY_PROJECT_ENDPOINT string = foundry.outputs.projectEndpoint
 output FOUNDRY_MODEL string = chatDeploymentName
+output FOUNDRY_ALT_MODEL string = altChatModelName
 output AZURE_SPEECH_ENDPOINT string = foundry.outputs.speechEndpoint

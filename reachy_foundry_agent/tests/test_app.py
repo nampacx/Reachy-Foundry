@@ -259,6 +259,18 @@ def test_settings_missing_env(monkeypatch, tmp_path):
         raise AssertionError("expected RuntimeError")
 
 
+def test_settings_reasoning_effort_defaults_to_none(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for k, v in (("FOUNDRY_PROJECT_ENDPOINT", "https://p"), ("FOUNDRY_MODEL", "gpt-6-luna"),
+                 ("AZURE_SPEECH_ENDPOINT", "https://s"), ("AZURE_SPEECH_API_KEY", "K")):
+        monkeypatch.setenv(k, v)
+    monkeypatch.delenv("FOUNDRY_REASONING_EFFORT", raising=False)
+    assert Settings.from_env().reasoning_effort == "none"
+    monkeypatch.setenv("FOUNDRY_REASONING_EFFORT", " Low ")
+    assert Settings.from_env().reasoning_effort == "low"
+
+
 def test_listen_for_utterance_aborts_when_asked():
     media = MagicMock()
     media.get_input_audio_samplerate.return_value = RATE

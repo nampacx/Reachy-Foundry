@@ -31,6 +31,28 @@ azd provision
 
 Then copy the new `.env` to the robot (`./scripts/deploy-to-robot.sh --restart`). Newer models may need a quota request; check availability in your region first. You can also change `CHAT_SKU_NAME` and `CHAT_CAPACITY` (thousand tokens per minute).
 
+## ⏱️ Comparing models (latency)
+
+Deploy a second model next to the first, e.g. the fast `gpt-6-luna` next to `gpt-6.1-terra`:
+
+```bash
+azd env set ALT_CHAT_MODEL_NAME gpt-6-luna
+azd env set ALT_CHAT_MODEL_VERSION 2026-09-22
+azd provision
+```
+
+The generated `.env` lists it as a commented-out `# FOUNDRY_MODEL=gpt-6-luna` line. Swap the two `FOUNDRY_MODEL` lines, redeploy with `--restart`, and compare the robot log. Every turn logs one line:
+
+```
+latency: stt 0.71s, model 1.32s (gpt-6-luna), tts 0.55s, first audio 2.58s after speech end
+```
+
+`model` covers the whole agent run, including tool calls (a `play_emotion` adds a round trip). Compare several turns of the same kind of question, not single ones.
+
+### 🧠 Reasoning effort
+
+`FOUNDRY_REASONING_EFFORT` (default `none`) is sent with every request. Spoken replies are short, so thinking time is mostly latency. Use `low`/`medium`/`high` to trade speed for smarter answers, or `default` to send nothing and use the model's own default (needed for models that reject the parameter).
+
 ## 🤔 Why not MAI Thinking 1 for the chat?
 
 It would have been the all-Microsoft-MAI choice, but the planned camera needs image input, so a general chat model it is. Swapping it later is only a deployment change, since the app only knows a deployment name.

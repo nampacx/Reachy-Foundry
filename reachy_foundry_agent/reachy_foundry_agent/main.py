@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import threading
+import time
 from functools import partial
 
 import numpy as np
@@ -70,8 +71,10 @@ class ReachyFoundryAgent(ReachyMiniApp):
                 await asyncio.to_thread(robot.go_to_sleep)
                 continue
             samples, rate = heard
+            heard_at = time.monotonic()  # end of the user's speech (after the endpointer's trailing silence)
             try:
                 text = await asyncio.to_thread(speech.transcribe, pcm_to_wav(samples, rate))
+                stt_s = time.monotonic() - heard_at
                 if not text:
                     continue
                 if gate.expired():  # timed out while this utterance was being transcribed
@@ -108,15 +111,26 @@ class ReachyFoundryAgent(ReachyMiniApp):
                     text = decision.text
                 log.info("user: %s", text)
                 robot.clear_pending_emotion()
+                model_start = time.monotonic()
                 try:
                     result = await agent.run(text, session=session)
                 finally:
+                    model_s = time.monotonic() - model_start
                     if wake_task is not None:
                         await wake_task  # never speak (or leave the turn) before the head is up
                 reply = result.text.strip()
                 log.info("reachy: %s", reply)
                 if reply:
-                    await self._say(mini, speech, reply, stop_event)
+                    tts_start = time.monotonic()
+
+                    def log_latency() -> None:  # one line per turn, to compare models
+                        now = time.monotonic()
+                        log.info(
+                            "latency: stt %.2fs, model %.2fs (%s), tts %.2fs, first audio %.2fs after speech end",
+                            stt_s, model_s, settings.foundry_model, now - tts_start, now - heard_at,
+                        )
+
+                    await self._say(mini, speech, reply, stop_event, on_audio_start=log_latency)
                 robot.play_pending_emotion()  # emotion queued with when="after_reply"
                 gate.touch()  # the timeout counts from the end of the reply, not from the question
             except Exception:
@@ -135,8 +149,10 @@ class ReachyFoundryAgent(ReachyMiniApp):
             log.exception("wake_up failed; raising head directly")
         mini.goto_target(head=create_head_pose(), antennas=np.zeros(2), duration=1.0)
 
-    async def _say(self, mini: ReachyMini, speech: SpeechClient, text: str, stop_event) -> None:
+    async def _say(self, mini: ReachyMini, speech: SpeechClient, text: str, stop_event, on_audio_start=None) -> None:
         samples, rate = await asyncio.to_thread(speech.synthesize, text)
+        if on_audio_start is not None:
+            on_audio_start()
         await asyncio.to_thread(play_samples, mini.media, np.asarray(samples), rate, stop_event)
 
 

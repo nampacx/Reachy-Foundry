@@ -76,5 +76,10 @@ def build_agent(
         follow=settings.follow_person,
     )
     instructions = INSTRUCTIONS + (FOLLOW_INSTRUCTIONS if detector is not None else "")
-    agent = Agent(client=client, name="Reachy", instructions=instructions, tools=robot.as_tools())
+    effort = settings.reasoning_effort
+    options = None if effort in ("", "default") else {"reasoning": {"effort": effort}}
+    log.info("chat model: %s, reasoning effort: %s", settings.foundry_model, effort or "default")
+    agent = Agent(
+        client=client, name="Reachy", instructions=instructions, tools=robot.as_tools(), default_options=options
+    )
     return agent, client, robot

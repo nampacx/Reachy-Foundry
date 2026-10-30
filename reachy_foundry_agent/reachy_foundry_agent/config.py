@@ -32,6 +32,9 @@ class Settings:
     foundry_model: str
     speech_endpoint: str
     speech_api_key: str
+    # Reasoning effort for reasoning models: none/low/medium/high, or "default" to send nothing (the model's own).
+    # "none" by default: spoken replies are short and latency matters more than deep thinking.
+    reasoning_effort: str = "none"
     speech_locale: str = "en-US"
     speech_voice: str = "en-US-Harper:MAI-Voice-2.1-Flash"
     speech_stt_model: str = "MAI-Transcribe-2"  # fast-transcription enhancedMode.model
@@ -66,6 +69,7 @@ class Settings:
             foundry_model=os.environ["FOUNDRY_MODEL"],
             speech_endpoint=os.environ["AZURE_SPEECH_ENDPOINT"].rstrip("/"),
             speech_api_key=os.environ["AZURE_SPEECH_API_KEY"],
+            reasoning_effort=os.environ.get("FOUNDRY_REASONING_EFFORT", "none").strip().lower(),
             speech_locale=os.environ.get("AZURE_SPEECH_LOCALE", "en-US"),
             speech_voice=os.environ.get("AZURE_SPEECH_VOICE", "en-US-Harper:MAI-Voice-2.1-Flash"),
             speech_stt_model=os.environ.get("AZURE_SPEECH_STT_MODEL", "MAI-Transcribe-2"),

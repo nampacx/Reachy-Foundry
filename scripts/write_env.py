@@ -33,6 +33,8 @@ def main() -> int:
     lines = [
         f"FOUNDRY_PROJECT_ENDPOINT={env['FOUNDRY_PROJECT_ENDPOINT']}",
         f"FOUNDRY_MODEL={env['FOUNDRY_MODEL']}",
+        *([f"# A/B test: swap in the second deployment\n# FOUNDRY_MODEL={env['FOUNDRY_ALT_MODEL']}"]
+          if env.get("FOUNDRY_ALT_MODEL") else []),
         f"AZURE_SPEECH_ENDPOINT={env['AZURE_SPEECH_ENDPOINT']}",
         f"AZURE_SPEECH_API_KEY={key.stdout.strip()}",
     ]
@@ -42,7 +44,9 @@ def main() -> int:
     if target.is_file():
         kept = [
             l for l in target.read_text(encoding="utf-8").splitlines()
-            if l.startswith(("AZURE_TENANT_ID=", "AZURE_CLIENT_ID=", "AZURE_CLIENT_SECRET="))
+            if l.startswith(
+                ("AZURE_TENANT_ID=", "AZURE_CLIENT_ID=", "AZURE_CLIENT_SECRET=", "FOUNDRY_REASONING_EFFORT=")
+            )
         ]
     lines += kept or [
         "# Robot (headless) auth: run scripts/create-robot-sp.ps1 to add a service principal",

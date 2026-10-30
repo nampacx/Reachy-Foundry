@@ -50,6 +50,7 @@ Environment variables or `.env` / `~/.reachy_foundry.env` (never commit):
 |---|---|
 | `FOUNDRY_PROJECT_ENDPOINT` | Foundry project endpoint |
 | `FOUNDRY_MODEL` | chat deployment name |
+| `FOUNDRY_REASONING_EFFORT` | optional: `none` (default), `low`, `medium`, `high` or `default` ([models](models.md)) |
 | `AZURE_SPEECH_ENDPOINT`, `AZURE_SPEECH_API_KEY` | Speech endpoint and key |
 | `AZURE_SPEECH_LOCALE`, `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_STT_MODEL` | see [models](models.md) |
 | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | robot service principal |
