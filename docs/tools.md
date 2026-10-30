@@ -29,12 +29,23 @@ Clips come from the Hugging Face dataset `pollen-robotics/reachy-mini-emotions-l
 - `go_to_sleep()` is also called by the app when a conversation ends.
 - `clear_pending_emotion()` / `play_pending_emotion()` manage the `after_reply` queue.
 
-## 📷 Camera tools (implemented, not registered)
+## 👀 Following a person
+
+While awake, Reachy keeps its head on the person in front of it (`follow.py`, `PersonFollower`). A background thread grabs a camera frame, finds the biggest person with the on-robot YOLO detector (`vision_local.py`, `yolov8n`, needs `ultralytics`), and if they are off-centre turns the head part of the way towards them with `look_at_image`. It only detects *a* person; it never identifies who it is, and frames never leave the robot.
+
+- Pauses while asleep (no camera use at all), and while a gesture or emotion is moving the head.
+- Holds still for 1.5 s after a gesture and 5 s after `move_head`, so "look left" is not undone immediately.
+- If nobody is in view, the head stays where it is.
+- Tools: `follow_person()` / `stop_following()` (e.g. "stop staring at me"), and `look_at_person()` for a one-off turn.
+- Turn it off with `REACHY_FOLLOW_PERSON=0`. Without `ultralytics` installed, the app logs a warning and none of this is registered.
+
+Tuning (`DEADBAND`, `GAIN`, `MOVE_S`, `INTERVAL_S`) lives at the top of `follow.py`.
+
+## 📷 Describe the view (implemented, not registered)
 
 - `describe_view(question)`: captures a frame and asks a vision-capable model about it, using a one-shot call so images never enter the chat history.
-- `look_at_person()`: finds a person with a YOLO detector (`vision_local.py`, needs `ultralytics`) and turns the head towards them.
 
-They are only registered when a vision function or detector is passed to `RobotTools`; `build_agent` currently passes neither. This is why `gpt-6.1-astra` (image input) was chosen for the future.
+It is only registered when a vision function is passed to `RobotTools`; `build_agent` currently passes none. This is why `gpt-6.1-astra` (image input) was chosen for the future.
 
 ## ➕ Adding a tool
 

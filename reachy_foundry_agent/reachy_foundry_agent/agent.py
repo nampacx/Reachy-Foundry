@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 
 from agent_framework import Agent
@@ -11,6 +12,9 @@ from reachy_mini import ReachyMini
 
 from .config import Settings
 from .robot_tools import RobotTools
+from .vision_local import PersonDetector
+
+log = logging.getLogger(__name__)
 
 INSTRUCTIONS = """\
 You are Reachy, a small, curious, friendly desktop robot with a head and two antennas.
@@ -39,8 +43,14 @@ React like a living being, not a machine:
 - When asked to go to sleep, rest or say goodnight, say a short goodnight and call go_to_sleep. While
   asleep, do not move; answer only to being woken up, then call wake_up and greet the person.
 - Do a quick physical reaction first, then speak. Do not narrate the tool calls.
-- You cannot see; you have no camera. If asked to look at something, say so kindly.
+- You cannot describe what you see. If asked to look at something, say so kindly.
 - If a tool returns an error, say so briefly and carry on.
+"""
+
+FOLLOW_INSTRUCTIONS = """\
+- Your camera spots people (it cannot tell who they are) and your head follows the person in front of you
+  on its own. If asked to stop following or staring, call stop_following; to start again, follow_person.
+  look_at_person turns to someone once.
 """
 
 
@@ -53,6 +63,18 @@ def build_agent(
         # Environment (service principal) / az login / managed identity, whichever is available.
         credential=DefaultAzureCredential(),
     )
-    robot = RobotTools(mini, stop_event=stop_event, emotions_dataset=settings.emotions_dataset)
-    agent = Agent(client=client, name="Reachy", instructions=INSTRUCTIONS, tools=robot.as_tools())
+    detector = None
+    if PersonDetector.is_available():
+        detector = PersonDetector(settings.person_model)
+    else:
+        log.warning("ultralytics not installed: no person detection, the head will not follow people")
+    robot = RobotTools(
+        mini,
+        stop_event=stop_event,
+        emotions_dataset=settings.emotions_dataset,
+        detector=detector,
+        follow=settings.follow_person,
+    )
+    instructions = INSTRUCTIONS + (FOLLOW_INSTRUCTIONS if detector is not None else "")
+    agent = Agent(client=client, name="Reachy", instructions=instructions, tools=robot.as_tools())
     return agent, client, robot

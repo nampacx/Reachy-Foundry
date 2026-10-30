@@ -37,6 +37,7 @@ class ReachyFoundryAgent(ReachyMiniApp):
             )
         speech = SpeechClient(settings)
         agent, client, robot = build_agent(settings, reachy_mini, stop_event)
+        robot.start_follower(stop_event)  # pauses itself while asleep or mid-gesture
         try:
             asyncio.run(self._loop(reachy_mini, stop_event, speech, agent, robot, settings))
         finally:

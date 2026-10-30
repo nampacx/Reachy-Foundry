@@ -49,6 +49,9 @@ def _is_reserved_emotion(name: str) -> bool:
 
 
 _ASLEEP_MSG = "error: I am asleep; call wake_up first"
+# After a gesture the person follower leaves the head alone for a moment, so it does not fight the gesture.
+GESTURE_HOLD_S = 1.5
+LOOK_HOLD_S = 5.0  # longer after move_head: the user asked to look somewhere, so stay there a bit
 
 VisionFn = Callable[[bytes, str], Awaitable[str]]
 
@@ -97,6 +100,7 @@ class RobotTools:
         stop_event: threading.Event | None = None,
         emotions_dataset: str = "pollen-robotics/reachy-mini-emotions-library",
         detector: Any | None = None,
+        follow: bool = True,
     ) -> None:
         self._mini = mini
         self._vision = vision
@@ -108,6 +112,13 @@ class RobotTools:
         self._asleep = False  # the app wakes the robot on start
         self._pending_emotion: str | None = None  # queued by play_emotion(when="after_reply")
         self._emotion_thread: threading.Thread | None = None
+        self._following = follow and detector is not None  # keep the person in view while awake
+        self._hold_until = 0.0  # monotonic time until which the follower must not move the head
+        self._follower = None
+        if detector is not None:
+            from .follow import PersonFollower
+
+            self._follower = PersonFollower(mini, detector, self._lock, self._may_follow)
 
     # --- helpers -----------------------------------------------------------------
     def _goto(self, yaw=0.0, pitch=0.0, roll=0.0, antennas=None, duration=0.7) -> None:
@@ -115,6 +126,13 @@ class RobotTools:
         ant = None if antennas is None else np.deg2rad(np.asarray(antennas, dtype=float))
         with self._lock:
             self._mini.goto_target(head=head, antennas=ant, duration=duration)
+        self._hold(GESTURE_HOLD_S)
+
+    def _hold(self, seconds: float) -> None:
+        self._hold_until = max(self._hold_until, time.monotonic() + seconds)
+
+    def _may_follow(self) -> bool:
+        return self._following and not self._asleep and time.monotonic() >= self._hold_until
 
     def _load_emotions(self):
         if self._emotions is None:
@@ -153,6 +171,7 @@ class RobotTools:
         pitch = _clamp(sum(_DIRECTIONS[w][1] for w in words), -1.0, 1.0) * deg
         roll = _TILTS[tilt] * _clamp(tilt_degrees, 0.0, MAX_ANGLE_DEG)
         self._goto(yaw=yaw, pitch=pitch, roll=roll)
+        self._hold(LOOK_HOLD_S)
         parts = [f"looking {' '.join(words)}"] if direction.strip() else []
         if tilt != "none":
             parts.append(f"tilted {tilt}")
@@ -232,6 +251,7 @@ class RobotTools:
             try:
                 with self._lock:
                     self._mini.play_move(move, initial_goto_duration=1.0)
+                self._hold(GESTURE_HOLD_S)
                 log.info("emotion finished: %s", name)
             except Exception:
                 log.exception("emotion %s failed", name)
@@ -254,7 +274,7 @@ class RobotTools:
             return "already asleep"
         with self._lock:
             self._mini.goto_sleep()
-        self._asleep = True
+            self._asleep = True  # set before releasing the lock, so the follower cannot lift the head again
         return "fell asleep"
 
     def wake_up(self) -> str:
@@ -329,6 +349,7 @@ class RobotTools:
         u, v = hit
         with self._lock:
             self._mini.look_at_image(int(u), int(v), duration=0.8)
+        self._hold(GESTURE_HOLD_S)
         return "looking at the person"
 
     async def look_at_person(self) -> str:
@@ -336,6 +357,24 @@ class RobotTools:
         if self._asleep:
             return _ASLEEP_MSG
         return await asyncio.to_thread(self._look_at_person)
+
+    def follow_person(self) -> str:
+        """Keep following the person in front of you with your head, so they stay in view. It is on by default; use this when asked to follow, watch or keep looking at someone again."""
+        if self._asleep:
+            return _ASLEEP_MSG
+        self._following = True
+        self._hold_until = 0.0
+        return "following the person"
+
+    def stop_following(self) -> str:
+        """Stop following people with your head and keep it still. Use when asked to stop following, stop staring or stop looking at someone."""
+        self._following = False
+        return "stopped following"
+
+    def start_follower(self, stop_event: threading.Event) -> None:
+        """Start the background person follower, if a detector is available (app-side; not exposed to the model)."""
+        if self._follower is not None:
+            self._follower.start(stop_event)
 
     # --- registration ------------------------------------------------------------
     def as_tools(self) -> list[Any]:
@@ -352,7 +391,7 @@ class RobotTools:
         if self._vision is not None:
             fns.append(self.describe_view)
         if self._detector is not None:
-            fns.append(self.look_at_person)
+            fns += [self.look_at_person, self.follow_person, self.stop_following]
         return [tool(_logged(fn), name=fn.__name__, description=(fn.__doc__ or "").strip()) for fn in fns]
 
 

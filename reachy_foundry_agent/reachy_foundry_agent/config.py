@@ -37,6 +37,7 @@ class Settings:
     speech_stt_model: str = "MAI-Transcribe-2"  # fast-transcription enhancedMode.model
     emotions_dataset: str = "pollen-robotics/reachy-mini-emotions-library"
     person_model: str = "yolov8n.pt"  # on-robot person detector (ultralytics weights name or path)
+    follow_person: bool = True  # keep the head on the person in view while awake (needs ultralytics)
     start_phrases: tuple[str, ...] = ("hey reachy", "hello reachy", "hi reachy", "ok reachy")
     end_phrases: tuple[str, ...] = ("goodbye", "bye", "end conversation", "stop conversation")
     conversation_timeout_s: float = 60.0  # back to idle after this much silence; 0 disables
@@ -69,6 +70,7 @@ class Settings:
             speech_voice=os.environ.get("AZURE_SPEECH_VOICE", "en-US-Harper:MAI-Voice-2.1-Flash"),
             speech_stt_model=os.environ.get("AZURE_SPEECH_STT_MODEL", "MAI-Transcribe-2"),
             person_model=os.environ.get("REACHY_PERSON_MODEL", "yolov8n.pt"),
+            follow_person=os.environ.get("REACHY_FOLLOW_PERSON", "1") != "0",
             start_phrases=_phrases("REACHY_START_PHRASES", cls.start_phrases),
             end_phrases=_phrases("REACHY_END_PHRASES", cls.end_phrases),
             conversation_timeout_s=float(os.environ.get("REACHY_CONVERSATION_TIMEOUT_S", "60")),
